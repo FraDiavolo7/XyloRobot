@@ -1,192 +1,85 @@
-#include "Makeblock.h"
-#include <SoftwareSerial.h>
-#include <Wire.h>
 
-MeStepperMotor stepper(PORT_1,0x1);
-MeUltrasonicSensor ultraSensor(PORT_3);
-MeDCMotor kicker(M1);
-MeRGBLed led(PORT_4,DEV1);
-MeLimitSwitch sw(PORT_4,DEV2);
+/*************************************************************************
+* File Name          : MusicRobot.ino
+* Author             : Evan
+* Updated            : Evan
+* Version            : V2.0.0
+* Date               : 6/5/2013
+* Description        : 1 Step Motors
+* License            : CC-BY-SA 3.0
+* Copyright (C) 2011 Hulu Robot Technology Co., Ltd. All right reserved.
+* http://www.makeblock.cc/
+**************************************************************************/
+#include <AccelStepper.h>
 
-int targetIndex = -1;
-int currentIndex = -1;
-int value;
-long startPosition = 0;
+// Define a stepper and the pins it will use
+AccelStepper stepper(AccelStepper::DRIVER, 12,13); // 12-PUL, 13-DIR
+int limitSW = 8;
+int magnetDrc = 7;
+int magnetPwm = 6;
+int stepMotorEN = 11;
 
-unsigned int knockFlag = false;
-unsigned int onestep = 79;
-int prevIndex=0;
-int lastNum = 0;
-
-void initStepper(){
-  stepper.begin(); // initialize stepper driver.
-  stepper.setMicroStep(STP_HALF);
-  stepper.setMaxSpeed(500);
-  stepper.setAcceleration(500);
-  stepper.run(); 
-  // output pulse
-  stepper.moveTo(-10000);
-  while(sw.touched());
+void initMotor()
+{
+  stepper.setMaxSpeed(2000);
+  stepper.setAcceleration(15000);
+  stepper.moveTo(-4000);
+  while(!digitalRead(limitSW)) stepper.run(); 
   stepper.stop();
   stepper.setCurrentPosition(0);
-  startPosition = -50;//stepper.currentPosition();
-  stepper.setMaxSpeed(20000);
-  stepper.setAcceleration(10000);
-  stepper.run();
-  stepper.moveTo(50);
-  while(stepper.currentPosition()!=50);
-  Serial.println("Stepper Begin");
+  stepper.setMaxSpeed(5000);//5000
 }
 
+// the setup routine runs once when you press reset:
 void setup()
 {
-  initStepper();
+  // initialize the digital pin as an output.
+  pinMode(limitSW, INPUT);
+  pinMode(magnetDrc, OUTPUT);
+  pinMode(magnetPwm, OUTPUT);
+  pinMode(stepMotorEN, OUTPUT);
+  digitalWrite(stepMotorEN, HIGH);
+  digitalWrite(magnetDrc, LOW);
+  digitalWrite(magnetPwm, 0);
+  initMotor();
   Serial.begin(9600);
-  pinMode(7,OUTPUT);
-  pinMode(6,OUTPUT);
-  digitalWrite(7,HIGH);
-  analogWrite(6,0);
-  pinMode(6,INPUT);
-  led.setNumber(31);
+  Serial.print("start:");Serial.println(digitalRead(limitSW));
 }
 
-int ledFlag = true;
+unsigned int scale = 0;
+unsigned char rxTemp = 0;
+boolean receiveFlag = true;
+boolean knockFlag = false;
+// the loop routine runs over and over again forever:
 void loop()
 {
-    if(Serial.available())
-    {
-    char temp = Serial.read(); 
-    if(temp< 0x12){
-       targetIndex = temp;
-       knockFlag = true;
-    }
-     if(targetIndex!=prevIndex){
-     moveStepper();
-     prevIndex = targetIndex;  
-   }
-  }
-  else
+  if(Serial.available() && receiveFlag)
   {
-    value = ultraSensor.distanceCm();
-    if(value <70)
+    rxTemp = Serial.read();
+    if(rxTemp < 0x12) //0 ~ 17 scale
     {
-    if(value <10)
-    {
-      targetIndex = 1;
+      scale = rxTemp * 223;
+      stepper.moveTo(scale);
+      receiveFlag = false;
+      knockFlag = true;
     }
-      else if(value <20)
-      {
-      targetIndex = 2;
-      }
-      else if(value <30)
-      {
-      targetIndex = 3;
-      }
-      else if(value <40)
-      {
-      targetIndex = 4;
-      }
-      else if(value <50)
-      {
-      targetIndex = 5;
-      }
-      else if(value <60)
-      {
-      targetIndex = 6;
-      }
-      else if(value <70)
-      {
-      targetIndex = 7;
-      }
-      else
-      { 
-      targetIndex = 16;
-      }
-      Serial.printf("%d,%d\n",value,targetIndex);
-      if(targetIndex!=prevIndex)
-      {
-       if(targetIndex<16){
-         knockFlag = true;
-         moveStepper();
-//         moveLight();
-       }
-       prevIndex = targetIndex;  
-      }
-    } 
   }
-   indicators(targetIndex*2,20,30,40);
-   delay(150);
-   checkStepperPosition();
-   delay(50);
-}
-
-
-void kickoff()
-{
- 
-  knockFlag = false; 
-  Serial.println("kick"); 
-  pinMode(6,OUTPUT);
-  analogWrite(6,100);
-  delay(50);
-  analogWrite(6,0);
-  pinMode(6,INPUT);
-}
-
-void moveStepper(){
-  if(targetIndex >=  0)
+  
+  while ( stepper.currentPosition() != scale )
+    stepper.run(); 
+  
+  if( stepper.currentPosition() == scale )
   {
-    int stepPos = startPosition+targetIndex*onestep;
-    Serial.printf("step move to %d\n",stepPos);
-    stepper.moveTo(stepPos);
+    if(knockFlag) //knock
+    {
+      analogWrite(magnetPwm, 255);
+      delay(50);
+      analogWrite(magnetPwm, 0);
+      Serial.write(1);
+      knockFlag = false;
+    }
+    receiveFlag = true;
   }
 }
 
-void checkStepperPosition()
-{
-  int steptogo = abs(stepper.currentPosition()-stepper.targetPosition());
-    if(steptogo==0 && knockFlag){
-      kickoff();
-    }
-}
 
-//void moveLight(){
-//  int offset = currentIndex - targetIndex;
-//  if(offset!=0){
-//   ledOn(currentIndex*1.8);
-//   currentIndex+=(offset>0) ?( -1 ):( 1);
-//   delay(50);
-//  }
-//  else
-//  {
-//   delay(50); 
-//  }
-//}
-
-void indicators(byte count,byte r,byte g,byte b){
-  byte inSpeed = 10;
-  if(lastNum <= count){
-      for(int x = lastNum; x <= count; ++x){
-          led.setColorAt(x,r,g,b);
-          led.show();
-          delay(inSpeed);
-      }
-    }
-    else{
-      for(int x = lastNum; x > count; --x){
-          led.setColorAt(x,0,0,0);
-          led.show();
-          delay(inSpeed);
-      }
-    }
-    lastNum = count; 
-}
-//void ledOn(int lednum)
-//{
-//  int red;
-//  for(int i=0;i<led.getNumber();i++){
-//    red = max(0,50-abs(i-lednum)*scaleFade);
-//    led.setColorAt(i, red,red==0?0:20*red/50,red==0?0:10*red/50);
-//  }
-//  led.show();
-//}
