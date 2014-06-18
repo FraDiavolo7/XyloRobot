@@ -5,9 +5,9 @@
 // Longueur : 96.4 mm
 
 Hauteur = 15;
-Largeur = 72.1;
-Longueur = 96.4;
-EpaisseurCale = 2;
+Largeur = 72.3;
+Longueur = 96.6;
+EpaisseurCale = 3;
 EpaisseurAxes = 5;
 
 support ();
@@ -52,8 +52,8 @@ module cale ()
 					[ 5, 7, 4], [ 5, 8, 7],
 					[ 0, 7, 1], [ 0, 6, 7],
 					[ 1, 8, 2], [ 1, 7, 8],
-					[ 0, 1, 4], [ 0, 3, 4],
-					[ 4, 5, 2], [ 4, 1, 2],
+					[ 0, 1, 4], [ 0, 4, 3],
+					[ 4, 2, 5], [ 4, 1, 2],
 
 				  ]
 		);

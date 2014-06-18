@@ -5,13 +5,13 @@
 // Longueur : 80.5 mm
 
 Hauteur = 17.5;
-Largeur = 72;
-Longueur = 80.5;
-EpaisseurCale = 2;
+Largeur = 72.3;
+Longueur = 80.7;
+EpaisseurCale = 3;
 EpaisseurAxes = 5;
 EpaisseurSocle = 20;
 
-support ();
+//support ();
 
 translate ([ -EpaisseurCale, -EpaisseurCale, Hauteur - EpaisseurCale] ) 
 	cale ();
@@ -27,7 +27,6 @@ translate ([ Longueur + EpaisseurCale, Largeur + EpaisseurCale, Hauteur - Epaiss
 translate ([ -EpaisseurCale, Largeur + EpaisseurCale, Hauteur - EpaisseurCale] ) 
 	rotate ([ 0, 0, 270])
 		cale ();
-
 
 module cale ()
 {
@@ -54,8 +53,8 @@ module cale ()
 					[ 5, 7, 4], [ 5, 8, 7],
 					[ 0, 7, 1], [ 0, 6, 7],
 					[ 1, 8, 2], [ 1, 7, 8],
-					[ 0, 1, 4], [ 0, 3, 4],
-					[ 4, 5, 2], [ 4, 1, 2],
+					[ 0, 1, 4], [ 0, 4, 3],
+					[ 4, 2, 5], [ 4, 1, 2],
 				  ]
 		);
 }
